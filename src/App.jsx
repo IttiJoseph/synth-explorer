@@ -2,6 +2,8 @@ import { useAudioEngine } from './hooks/useAudioEngine.js'
 import TransportBar from './components/TransportBar.jsx'
 import OscillatorPanel from './components/OscillatorPanel.jsx'
 import FilterPanel from './components/FilterPanel.jsx'
+import EnvelopePanel from './components/EnvelopePanel.jsx'
+import LFOPanel from './components/LFOPanel.jsx'
 
 export default function App() {
   const {
@@ -16,6 +18,14 @@ export default function App() {
     setFilterType,
     setFilterCutoff,
     setFilterResonance,
+    setAttack,
+    setDecay,
+    setSustain,
+    setRelease,
+    setLFOWaveform,
+    setLFORate,
+    setLFODepth,
+    setLFOTarget,
   } = useAudioEngine()
 
   return (
@@ -40,6 +50,22 @@ export default function App() {
           onFilterType={setFilterType}
           onCutoff={setFilterCutoff}
           onResonance={setFilterResonance}
+        />
+
+        <EnvelopePanel
+          params={params}
+          onAttack={setAttack}
+          onDecay={setDecay}
+          onSustain={setSustain}
+          onRelease={setRelease}
+        />
+
+        <LFOPanel
+          params={params}
+          onLFOWaveform={setLFOWaveform}
+          onLFORate={setLFORate}
+          onLFODepth={setLFODepth}
+          onLFOTarget={setLFOTarget}
         />
       </main>
     </div>

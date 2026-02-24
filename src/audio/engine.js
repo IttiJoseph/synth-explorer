@@ -92,18 +92,23 @@ const limiter = new Tone.Limiter(-3);
 // Analyser for oscilloscope — taps post-limiter
 const analyser = new Tone.Analyser('waveform', 1024);
 
-// LFO — starts running immediately, depth=0 so min=max=cutoff (no audible modulation)
+// Dedicated gain node for LFO amplitude modulation (tremolo).
+// Keeping this separate from synth.volume avoids the dB-vs-linear unit mismatch
+// that occurs when connecting an LFO directly to a Param<"decibels">.
+const tremoloGain = new Tone.Gain(1);
+
+// LFO — starts running immediately, depth=0 so min=max=0 (no modulation)
 const lfo = new Tone.LFO({
   type:      DEFAULTS.lfoWaveform,
   frequency: DEFAULTS.lfoRate,
-  min:       DEFAULTS.filterCutoff,
-  max:       DEFAULTS.filterCutoff,
+  min:       0,
+  max:       0,
   amplitude: 1,
 }).start();
 
 // ─── Signal chain ──────────────────────────────────────────────────────────────
 
-synth.chain(filter, reverb, delay, limiter, Tone.getDestination());
+synth.chain(tremoloGain, filter, reverb, delay, limiter, Tone.getDestination());
 limiter.connect(analyser);  // oscilloscope tap (read-only, no audio output)
 
 // Set initial volume from defaults
@@ -113,21 +118,30 @@ synth.volume.value = safeGainToDb(DEFAULTS.amplitude);
 // Disconnect → reset modulated params → reconnect to new target with scaled range
 
 function reconnectLFO() {
-  lfo.disconnect();
+  // Disconnect safely — LFO may have no connections on first call (depth was 0)
+  try { lfo.disconnect(); } catch (_) {}
 
-  // Reset all potentially-modulated params back to their manual values
-  // (prevents params getting stuck at a mid-modulation value on target switch)
+  // Reset overridden state on Signal targets.
+  // Tone.js's connectSignal() sets signal.overridden = true when an LFO connects to a
+  // Signal, which makes _fromType() permanently return 0 for all subsequent rampTo()
+  // calls. We must clear this flag before rampTo() to restore manual control.
+  filter.frequency.overridden = false;
+  synth.detune.overridden = false;
+
+  // Restore manually-controlled values (works now that overridden is cleared)
   filter.frequency.rampTo(state.filterCutoff, 0.03);
   synth.detune.rampTo(0, 0.03);
-  synth.volume.rampTo(safeGainToDb(state.amplitude), 0.03);
+  tremoloGain.gain.rampTo(1, 0.03);
 
   if (state.lfoDepth === 0) return;
 
-  const { lfoDepth, lfoTarget, filterCutoff, amplitude } = state;
+  const { lfoDepth, lfoTarget, filterCutoff } = state;
 
   switch (lfoTarget) {
     case 'filter': {
-      // Sweep around current cutoff — scale by available headroom in each direction
+      // connectSignal will zero filter.frequency's base value (setValueAtTime(0,0)) and
+      // set overridden=true. Since the base will be 0, we use ABSOLUTE Hz values so the
+      // LFO itself provides the full frequency value (not a delta).
       const downRoom = filterCutoff - 20;
       const upRoom   = 20000 - filterCutoff;
       lfo.min = Math.max(20,    filterCutoff - lfoDepth * downRoom * 0.8);
@@ -136,7 +150,8 @@ function reconnectLFO() {
       break;
     }
     case 'pitch': {
-      // Modulate synth detune in cents (±200 cents = ±2 semitones at full depth)
+      // connectSignal zeros synth.detune's base (0 cents = no pitch change, correct).
+      // LFO then drives absolute detune in cents: ±200 cents = ±2 semitones at full depth.
       const cents = lfoDepth * 200;
       lfo.min = -cents;
       lfo.max =  cents;
@@ -144,11 +159,12 @@ function reconnectLFO() {
       break;
     }
     case 'amplitude': {
-      // Modulate volume in dB (asymmetric: swings down, not above base level)
-      const baseDb = safeGainToDb(amplitude);
-      lfo.min = Math.max(-40, baseDb - lfoDepth * 20);
-      lfo.max = baseDb;
-      lfo.connect(synth.volume);
+      // tremoloGain.gain is a Param (not a Signal) — connectSignal will NOT set overridden,
+      // but it WILL cancel automations and zero the base (setValueAtTime(0,0)).
+      // Use absolute gain values so LFO drives the full gain value from the zeroed base.
+      lfo.min = 1 - lfoDepth;  // absolute gain: (1−depth) to 1
+      lfo.max = 1;
+      lfo.connect(tremoloGain.gain);
       break;
     }
   }
