@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useAudioEngine } from './hooks/useAudioEngine.js'
 import TransportBar from './components/TransportBar.jsx'
 import OscillatorPanel from './components/OscillatorPanel.jsx'
@@ -6,8 +7,11 @@ import EnvelopePanel from './components/EnvelopePanel.jsx'
 import LFOPanel from './components/LFOPanel.jsx'
 import EffectsPanel from './components/EffectsPanel.jsx'
 import Oscilloscope from './components/Oscilloscope.jsx'
+import SignalFlowDiagram from './components/SignalFlowDiagram.jsx'
 
 export default function App() {
+  const [activePanel, setActivePanel] = useState(null)
+
   const {
     params,
     isDroning,
@@ -58,44 +62,71 @@ export default function App() {
       <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
         <Oscilloscope getAnalyser={getAnalyser} />
 
-        <OscillatorPanel
-          params={params}
-          onWaveform={setWaveform}
-          onFrequency={setFrequency}
-          onAmplitude={setAmplitude}
-        />
+        <SignalFlowDiagram activePanel={activePanel} />
 
-        <FilterPanel
-          params={params}
-          onFilterType={setFilterType}
-          onCutoff={setFilterCutoff}
-          onResonance={setFilterResonance}
-        />
+        <div
+          onPointerEnter={() => setActivePanel('osc')}
+          onPointerLeave={() => setActivePanel(null)}
+        >
+          <OscillatorPanel
+            params={params}
+            onWaveform={setWaveform}
+            onFrequency={setFrequency}
+            onAmplitude={setAmplitude}
+          />
+        </div>
 
-        <EnvelopePanel
-          params={params}
-          onAttack={setAttack}
-          onDecay={setDecay}
-          onSustain={setSustain}
-          onRelease={setRelease}
-        />
+        <div
+          onPointerEnter={() => setActivePanel('filter')}
+          onPointerLeave={() => setActivePanel(null)}
+        >
+          <FilterPanel
+            params={params}
+            onFilterType={setFilterType}
+            onCutoff={setFilterCutoff}
+            onResonance={setFilterResonance}
+          />
+        </div>
 
-        <LFOPanel
-          params={params}
-          onLFOWaveform={setLFOWaveform}
-          onLFORate={setLFORate}
-          onLFODepth={setLFODepth}
-          onLFOTarget={setLFOTarget}
-        />
+        <div
+          onPointerEnter={() => setActivePanel('env')}
+          onPointerLeave={() => setActivePanel(null)}
+        >
+          <EnvelopePanel
+            params={params}
+            onAttack={setAttack}
+            onDecay={setDecay}
+            onSustain={setSustain}
+            onRelease={setRelease}
+          />
+        </div>
 
-        <EffectsPanel
-          params={params}
-          onReverbMix={setReverbMix}
-          onReverbDecay={setReverbDecay}
-          onDelayMix={setDelayMix}
-          onDelayTime={setDelayTime}
-          onDelayFeedback={setDelayFeedback}
-        />
+        <div
+          onPointerEnter={() => setActivePanel('lfo')}
+          onPointerLeave={() => setActivePanel(null)}
+        >
+          <LFOPanel
+            params={params}
+            onLFOWaveform={setLFOWaveform}
+            onLFORate={setLFORate}
+            onLFODepth={setLFODepth}
+            onLFOTarget={setLFOTarget}
+          />
+        </div>
+
+        <div
+          onPointerEnter={() => setActivePanel('fx')}
+          onPointerLeave={() => setActivePanel(null)}
+        >
+          <EffectsPanel
+            params={params}
+            onReverbMix={setReverbMix}
+            onReverbDecay={setReverbDecay}
+            onDelayMix={setDelayMix}
+            onDelayTime={setDelayTime}
+            onDelayFeedback={setDelayFeedback}
+          />
+        </div>
       </main>
     </div>
   )
