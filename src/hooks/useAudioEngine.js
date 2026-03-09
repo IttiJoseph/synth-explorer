@@ -146,6 +146,13 @@ export function useAudioEngine() {
     setIsSequencePlaying(false)
   }, [])
 
+  // ─── Presets ─────────────────────────────────────────────────────────────────
+
+  const loadPreset = useCallback((preset) => {
+    engine.applyPreset(preset.params)
+    setParams({ ...preset.params })
+  }, [])
+
   // ─── Effects ─────────────────────────────────────────────────────────────────
 
   const setReverbMix = useCallback((mix) => {
@@ -204,5 +211,6 @@ export function useAudioEngine() {
     setDelayTime,
     setDelayFeedback,
     getAnalyser: engine.getAnalyser,
+    loadPreset,
   }
 }

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useAudioEngine } from './hooks/useAudioEngine.js'
+import { PRESETS } from './audio/presets.js'
 import TransportBar from './components/TransportBar.jsx'
+import PresetBar from './components/PresetBar.jsx'
 import OscillatorPanel from './components/OscillatorPanel.jsx'
 import FilterPanel from './components/FilterPanel.jsx'
 import EnvelopePanel from './components/EnvelopePanel.jsx'
@@ -11,6 +13,7 @@ import SignalFlowDiagram from './components/SignalFlowDiagram.jsx'
 
 export default function App() {
   const [activePanel, setActivePanel] = useState(null)
+  const [activePreset, setActivePreset] = useState(null)
 
   const {
     params,
@@ -43,6 +46,7 @@ export default function App() {
     setDelayTime,
     setDelayFeedback,
     getAnalyser,
+    loadPreset,
   } = useAudioEngine()
 
   return (
@@ -60,6 +64,12 @@ export default function App() {
       />
 
       <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
+        <PresetBar
+          presets={PRESETS}
+          activePresetId={activePreset}
+          onSelect={(preset) => { loadPreset(preset); setActivePreset(preset.id) }}
+        />
+
         <Oscilloscope getAnalyser={getAnalyser} />
 
         <SignalFlowDiagram activePanel={activePanel} />

@@ -222,7 +222,8 @@ export function setFrequency(hz) {
   if (state.isDroning) {
     synth.frequency.rampTo(hz, 0.05);
   }
-  if (state.lfoTarget === 'pitch') reconnectLFO();
+  // LFO pitch uses detune cents (relative), so base frequency change doesn't
+  // need to update lfo.min/max — no reconnect needed here.
 }
 
 /**
@@ -230,8 +231,13 @@ export function setFrequency(hz) {
  */
 export function setAmplitude(value) {
   state.amplitude = value;
-  synth.volume.rampTo(safeGainToDb(value), 0.02);
-  if (state.lfoTarget === 'amplitude') reconnectLFO();
+  if (state.lfoTarget === 'amplitude' && state.lfoDepth > 0) {
+    // LFO drives tremoloGain — update depth range without reconnecting
+    lfo.min = 1 - state.lfoDepth;
+    lfo.max = 1;
+  } else {
+    synth.volume.rampTo(safeGainToDb(value), 0.02);
+  }
 }
 
 // ─── Filter ────────────────────────────────────────────────────────────────────
@@ -249,8 +255,17 @@ export function setFilterType(type) {
  */
 export function setFilterCutoff(hz) {
   state.filterCutoff = hz;
-  filter.frequency.rampTo(hz, 0.02);
-  if (state.lfoTarget === 'filter') reconnectLFO();
+  if (state.lfoTarget === 'filter' && state.lfoDepth > 0) {
+    // LFO is driving filter.frequency — recenter LFO range without reconnecting.
+    // Calling reconnectLFO() here zeroes filter.frequency on every slider frame,
+    // which causes audible glitches and makes the slider fight itself.
+    const downRoom = hz - 20;
+    const upRoom   = 20000 - hz;
+    lfo.min = Math.max(20,    hz - state.lfoDepth * downRoom * 0.8);
+    lfo.max = Math.min(20000, hz + state.lfoDepth * upRoom   * 0.8);
+  } else {
+    filter.frequency.rampTo(hz, 0.02);
+  }
 }
 
 /**
@@ -398,6 +413,59 @@ export function setDelay(mix, time, feedback) {
   setDelayMix(mix);
   setDelayTime(time);
   setDelayFeedback(feedback);
+}
+
+// ─── Preset loading ────────────────────────────────────────────────────────────
+
+/**
+ * Apply all parameters from a preset object at once.
+ *
+ * Updates state fully before touching Tone.js nodes, then calls reconnectLFO()
+ * exactly once. This avoids the multiple intermediate reconnects that corrupt
+ * signal routing when individual setters are called sequentially.
+ */
+export function applyPreset(p) {
+  // Batch-update all state first so reconnectLFO() sees the final values
+  state.waveform        = p.waveform;
+  state.frequency       = p.frequency;
+  state.amplitude       = p.amplitude;
+  state.filterType      = p.filterType;
+  state.filterCutoff    = p.filterCutoff;
+  state.filterResonance = p.filterResonance;
+  state.attack          = p.attack;
+  state.decay           = p.decay;
+  state.sustain         = p.sustain;
+  state.release         = p.release;
+  state.lfoWaveform     = p.lfoWaveform;
+  state.lfoRate         = p.lfoRate;
+  state.lfoDepth        = p.lfoDepth;
+  state.lfoTarget       = p.lfoTarget;
+  state.reverbMix       = p.reverbMix;
+  state.reverbDecay     = p.reverbDecay;
+  state.delayMix        = p.delayMix;
+  state.delayTime       = p.delayTime;
+  state.delayFeedback   = p.delayFeedback;
+
+  // Apply to Tone.js nodes
+  synth.oscillator.type = p.waveform;
+  if (state.isDroning) synth.frequency.rampTo(p.frequency, 0.05);
+  synth.volume.rampTo(safeGainToDb(p.amplitude), 0.02);
+  filter.type = p.filterType;
+  filter.Q.rampTo(resonanceToQ(p.filterResonance), 0.02);
+  synth.envelope.attack  = p.attack;
+  synth.envelope.decay   = p.decay;
+  synth.envelope.sustain = p.sustain;
+  synth.envelope.release = p.release;
+  lfo.type = p.lfoWaveform;
+  lfo.frequency.rampTo(p.lfoRate, 0.1);
+  reverb.wet.rampTo(p.reverbMix, 0.05);
+  reverb.decay = p.reverbDecay;
+  delay.wet.rampTo(p.delayMix, 0.05);
+  delay.delayTime.rampTo(p.delayTime, 0.1);
+  delay.feedback.rampTo(Math.min(0.8, p.delayFeedback), 0.05);
+
+  // Single reconnect with fully-correct state
+  reconnectLFO();
 }
 
 // ─── Utilities ─────────────────────────────────────────────────────────────────
