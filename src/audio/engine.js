@@ -409,7 +409,9 @@ export function setDelay(mix, time, feedback) {
  * @param {number} time      AudioContext scheduled time from Tone.Part callback
  */
 export function triggerNote(note, duration, time) {
-  synth.triggerAttackRelease(note, duration, time);
+  const baseHz = Tone.Frequency(note).toFrequency();
+  const transposedHz = baseHz * (state.frequency / DEFAULTS.frequency);
+  synth.triggerAttackRelease(transposedHz, duration, time);
 }
 
 /** Returns the Tone.Analyser node for oscilloscope reads. */

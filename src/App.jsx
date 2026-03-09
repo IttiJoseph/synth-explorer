@@ -5,6 +5,7 @@ import FilterPanel from './components/FilterPanel.jsx'
 import EnvelopePanel from './components/EnvelopePanel.jsx'
 import LFOPanel from './components/LFOPanel.jsx'
 import EffectsPanel from './components/EffectsPanel.jsx'
+import Oscilloscope from './components/Oscilloscope.jsx'
 
 export default function App() {
   const {
@@ -37,6 +38,7 @@ export default function App() {
     setDelayMix,
     setDelayTime,
     setDelayFeedback,
+    getAnalyser,
   } = useAudioEngine()
 
   return (
@@ -54,6 +56,8 @@ export default function App() {
       />
 
       <main className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
+        <Oscilloscope getAnalyser={getAnalyser} />
+
         <OscillatorPanel
           params={params}
           onWaveform={setWaveform}

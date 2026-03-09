@@ -203,5 +203,6 @@ export function useAudioEngine() {
     setDelayMix,
     setDelayTime,
     setDelayFeedback,
+    getAnalyser: engine.getAnalyser,
   }
 }
