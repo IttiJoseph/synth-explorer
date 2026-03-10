@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAudioEngine } from './hooks/useAudioEngine.js'
 import { PRESETS } from './audio/presets.js'
 import logoUrl from './assets/Logo.svg'
@@ -11,6 +11,46 @@ import EffectsPanel from './components/EffectsPanel.jsx'
 import Oscilloscope from './components/Oscilloscope.jsx'
 import LearningSection from './components/LearningSection.jsx'
 import Footer from './components/Footer.jsx'
+
+function SpeakerGrill() {
+  const ref = useRef(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      setSize({ w: width, h: height })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const r = 5, gap = 18
+  const cols = size.w > 0 ? Math.floor((size.w - r * 2) / gap) + 1 : 0
+  const rows = size.h > 0 ? Math.floor((size.h - r * 2) / gap) + 1 : 0
+  const startX = (size.w - (cols - 1) * gap) / 2
+  const startY = (size.h - (rows - 1) * gap) / 2
+
+  return (
+    <div ref={ref} className="flex-1" style={{ minHeight: '40px' }}>
+      <svg width="100%" height="100%">
+        {Array.from({ length: rows }, (_, row) =>
+          Array.from({ length: cols }, (_, col) => (
+            <circle
+              key={`${row}-${col}`}
+              cx={startX + col * gap}
+              cy={startY + row * gap}
+              r={r}
+              fill="#6b5e56"
+            />
+          ))
+        )}
+      </svg>
+    </div>
+  )
+}
 
 export default function App() {
   const [activePreset, setActivePreset] = useState(null)
@@ -116,7 +156,7 @@ export default function App() {
             />
           </div>
 
-          <div className="h-full">
+          <div className="h-full flex flex-col gap-3">
             <LFOPanel
               params={params}
               onLFOWaveform={setLFOWaveform}
@@ -124,6 +164,8 @@ export default function App() {
               onLFODepth={setLFODepth}
               onLFOTarget={setLFOTarget}
             />
+            {/* Speaker grill — Braun-style dot grid */}
+            <SpeakerGrill />
           </div>
 
           <div className="h-full">

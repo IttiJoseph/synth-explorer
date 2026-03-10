@@ -48,7 +48,7 @@ export default function LFOPanel({ params, onLFOWaveform, onLFORate, onLFODepth,
   const { lfoWaveform, lfoRate, lfoDepth, lfoTarget } = params
 
   return (
-    <section className="bg-hw-panel border border-hw-border rounded-lg p-5 h-full">
+    <section className="bg-hw-panel border border-hw-border rounded-lg p-5">
       {/* Panel header */}
       <div className="flex items-center gap-2 mb-5">
         <div className="w-1.5 h-4 rounded-sm bg-violet-500" />
